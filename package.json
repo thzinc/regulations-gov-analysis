@@ -1,0 +1,19 @@
+{
+  "name": "regulation-analysis",
+  "version": "1.0.0",
+  "description": "Analysis of public submissions on dockets on Regulations.gov",
+  "main": "index.js",
+  "scripts": {
+    "download": "node download.js",
+    "analyze": "node analyze.js"
+  },
+  "author": "Daniel James",
+  "license": "MIT",
+  "dependencies": {
+    "fs-extra": "^3.0.1",
+    "json-2-csv": "^2.1.1",
+    "node-fetch": "^1.7.0",
+    "sentence-tokenizer": "0.0.8",
+    "sentiment": "^4.0.0"
+  }
+}
