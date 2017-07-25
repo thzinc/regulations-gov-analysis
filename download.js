@@ -12,20 +12,32 @@ async function getDocket(apiKey, docketId) {
 async function getDocuments(apiKey, docketId) {
     const resultsPerPage = 1000;
     let pageNum = 0;
-    let documents = [];
+    let count = 0;
     do {
-        const response = await fetch(`${baseUrl}/documents.json?api_key=${apiKey}&dktid=${docketId}&sb=docId&so=ASC&rpp=${resultsPerPage}&po=${pageNum * resultsPerPage}`);
-        const page = await response.json();
+        let page;
+        for (let remainingTries = 3; remainingTries > 0; remainingTries -= 1) {
+            const url = `${baseUrl}/documents.json?api_key=${apiKey}&dktid=${docketId}&sb=docId&so=ASC&rpp=${resultsPerPage}&po=${pageNum * resultsPerPage}`;
+            try {
+                const response = await fetch(url);
+                page = await response.json();
+                break;
+            }
+            catch (err) {
+                console.error(`(Remaining retries: ${remainingTries}) Error requesting ${url}: ${err}`);
+            }
+        }
 
         if (!page.documents || !page.documents.length) break;
 
-        documents = [...documents, ...page.documents];
-        console.info(`Retrieved ${page.documents.length} documents. (${documents.length} of ${page.totalNumRecords})`)
+        await Promise.all(page.documents
+            .map(document =>
+                fs.outputJson(path.join(__dirname, 'dockets', docketId, 'documents', `${document.documentId}.json`), document)));
+
+        count += page.documents.length;
+        console.info(`Retrieved ${page.documents.length} documents. (${count} of ${page.totalNumRecords})`)
 
         pageNum += 1;
     } while (true);
-
-    return documents;
 }
 
 async function main() {
@@ -44,9 +56,8 @@ async function main() {
     console.info(`Retrieving docket ${requestedDocketId}...`);
 
     const docket = await getDocket(apiKey, requestedDocketId);
-    const documents = await getDocuments(apiKey, requestedDocketId);
     await fs.outputJson(path.join(__dirname, 'dockets', docket.docketId, `${docket.docketId}.json`), docket);
-    await Promise.all(documents.map(document => fs.outputJson(path.join(__dirname, 'dockets', docket.docketId, 'documents', `${document.documentId}.json`), document)));
+    await getDocuments(apiKey, requestedDocketId);
 }
 
 main();
